@@ -445,6 +445,8 @@ li img {
     .type {
         margin-left: 20px !important;
         font-size: 16px !important;
+        z-index: 1000 !important;
+        position: relative !important;
     }
     
     /*标准型计算器按钮 - 使用flex布局代替float*/
@@ -531,17 +533,23 @@ li img {
         font-size: 14px !important;
     }
     
-    /*类型选择侧边栏*/
+    /*类型选择侧边栏 - 移动端适配*/
     .type-bar {
-        top: 120px !important;
+        position: absolute !important;
+        top: 50px !important;
+        left: 10px !important;
         width: 120px !important;
+        z-index: 1001 !important;
+        background-color: #E6E6E6 !important;
+        box-shadow: 0px 2px 10px rgba(0,0,0,0.2) !important;
     }
     
     .type-bar li {
         width: 120px !important;
         line-height: 40px !important;
         font-size: 16px !important;
-        float: left !important;
+        float: none !important;
+        display: block !important;
     }
     
     /*功能切换按钮*/
@@ -560,7 +568,7 @@ li img {
         padding: 10px 20px !important;
     }
     
-    /*历史记录和绘图面板*/
+    /*历史记录和绘图面板 - 确保显示*/
     .history-panel,
     .graph-panel {
         position: static !important;
@@ -569,6 +577,7 @@ li img {
         border-radius: 0 !important;
         margin-top: 0 !important;
         box-sizing: border-box !important;
+        display: block !important;
     }
     
     .history-list {
@@ -618,5 +627,11 @@ li img {
     ul {
         float: none !important;
         display: block !important;
+    }
+    
+    /*确保面板切换按钮正常工作*/
+    .toggle-btn.active {
+        background-color: #F2F2F2 !important;
+        border-bottom: 1px solid #F2F2F2 !important;
     }
 }
