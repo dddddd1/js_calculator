@@ -389,155 +389,234 @@ li img {
     }
 }
 
-/*移动端样式*/
-@media (max-width: 768px) {
+/*移动端样式 - 完全重写，确保覆盖桌面端样式*/
+@media only screen and (max-width: 768px) {
+    /*全局样式重置*/
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
     body {
         margin: 0;
         padding: 0;
         overflow-x: hidden;
+        width: 100%;
+        -webkit-text-size-adjust: 100%;
     }
     
+    /*计算器主体*/
     .standard-main,
     .science-main,
     .programmer-main {
-        width: 100%;
-        margin: 0;
-        box-shadow: none;
+        width: 100% !important;
+        margin: 0 !important;
+        box-shadow: none !important;
         min-height: 100vh;
+        height: auto !important;
     }
     
+    /*结果显示区域*/
     .result, .sci-result {
         height: 150px;
+        width: 100%;
     }
     
     .pro-result {
         height: 250px;
+        width: 100%;
     }
     
     .second {
-        font-size: 36px;
-        padding-right: 20px;
-        line-height: 60px;
+        font-size: 36px !important;
+        padding-right: 20px !important;
+        line-height: 60px !important;
+        width: 100%;
+        word-wrap: break-word;
     }
     
     .pre {
-        padding-right: 20px;
-        font-size: 16px;
+        padding-right: 20px !important;
+        font-size: 16px !important;
+        width: 100%;
+        word-wrap: break-word;
     }
     
     .type {
-        margin-left: 20px;
-        font-size: 16px;
+        margin-left: 20px !important;
+        font-size: 16px !important;
     }
     
+    /*标准型计算器按钮 - 使用flex布局代替float*/
+    #std-top-symbol,
     #std-num-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-    }
-    
-    #std-top-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        height: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        float: none !important;
     }
     
     #std-top-symbol li,
     #std-num-symbol li {
-        width: 100%;
-        line-height: 70px;
-        font-size: 20px;
+        width: 25% !important;
+        line-height: 70px !important;
+        font-size: 20px !important;
         box-sizing: border-box;
         border: 1px solid #D9D9D9;
+        float: none !important;
+        display: block !important;
     }
     
-    #sci-top-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-    }
-    
+    /*科学型计算器按钮*/
+    #sci-top-symbol,
     #sci-num-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        height: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        float: none !important;
     }
     
     #sci-top-symbol li,
     #sci-num-symbol li {
-        width: 100%;
-        line-height: 60px;
-        font-size: 18px;
+        width: 20% !important;
+        line-height: 60px !important;
+        font-size: 18px !important;
         box-sizing: border-box;
         border: 1px solid #D9D9D9;
+        float: none !important;
+        display: block !important;
     }
     
+    /*程序员型计算器按钮*/
     #pro-top-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-    }
-    
-    #pro-num-symbol {
-        height: auto;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        height: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        float: none !important;
     }
     
     #pro-top-symbol li {
-        width: 100%;
-        line-height: 60px;
-        font-size: 18px;
+        width: 16.666% !important;
+        line-height: 60px !important;
+        font-size: 18px !important;
         box-sizing: border-box;
         border: 1px solid #D9D9D9;
+        float: none !important;
+        display: block !important;
+    }
+    
+    #pro-num-symbol {
+        height: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        float: none !important;
     }
     
     #pro-num-symbol li {
-        width: 100%;
-        line-height: 60px;
-        font-size: 18px;
+        width: 20% !important;
+        line-height: 60px !important;
+        font-size: 18px !important;
         box-sizing: border-box;
         border: 1px solid #D9D9D9;
+        float: none !important;
+        display: block !important;
     }
     
     #pro-scales {
-        margin-left: 20px;
-        font-size: 14px;
+        margin-left: 20px !important;
+        font-size: 14px !important;
     }
     
+    /*类型选择侧边栏*/
     .type-bar {
-        top: 120px;
-        width: 120px;
+        top: 120px !important;
+        width: 120px !important;
     }
     
     .type-bar li {
-        width: 120px;
-        line-height: 40px;
-        font-size: 16px;
+        width: 120px !important;
+        line-height: 40px !important;
+        font-size: 16px !important;
+        float: left !important;
     }
     
+    /*功能切换按钮*/
     .toggle-buttons {
-        position: static;
-        display: flex;
-        justify-content: center;
-        padding: 10px;
-        background-color: #F2F2F2;
+        position: static !important;
+        display: flex !important;
+        justify-content: center !important;
+        padding: 10px !important;
+        background-color: #F2F2F2 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     
+    .toggle-btn {
+        font-size: 14px !important;
+        padding: 10px 20px !important;
+    }
+    
+    /*历史记录和绘图面板*/
     .history-panel,
     .graph-panel {
-        position: static;
-        width: 100%;
-        box-shadow: none;
-        border-radius: 0;
-        margin-top: 0;
+        position: static !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin-top: 0 !important;
+        box-sizing: border-box !important;
     }
     
     .history-list {
-        max-height: 300px;
+        max-height: 300px !important;
+        overflow-y: auto !important;
     }
     
+    /*绘图区域*/
     #graph-canvas {
-        height: 250px;
+        height: 250px !important;
+        width: 100% !important;
+    }
+    
+    /*绘图控制面板*/
+    .graph-controls {
+        padding: 15px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #function-input {
+        font-size: 16px !important;
+        padding: 12px !important;
+    }
+    
+    .graph-range {
+        flex-wrap: wrap !important;
+    }
+    
+    .graph-range input {
+        font-size: 16px !important;
+        padding: 8px !important;
+    }
+    
+    #draw-btn, #clear-graph-btn {
+        font-size: 16px !important;
+        padding: 12px 20px !important;
+        margin-top: 10px !important;
+    }
+    
+    /*确保所有li元素在移动端不使用float*/
+    li {
+        float: none !important;
+        display: block !important;
+    }
+    
+    /*确保ul元素在移动端不使用float*/
+    ul {
+        float: none !important;
+        display: block !important;
     }
 }
