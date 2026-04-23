@@ -1,11 +1,16 @@
 window.onload = function () {
     Calculator.initCache();
     Calculator.initListeners();
+    Calculator.initFeatures();
 };
 
 //全局计算器对象
 var Calculator = (function () {
     var cal = {
+        //历史记录数组
+        history: [],
+        //最大历史记录条数
+        maxHistory: 20,
         //计算器按键编码
         keyCodes: {
             0: '0',
@@ -594,6 +599,20 @@ var Calculator = (function () {
                 if (cal.isNumber(si)) {
                     cal.operandStack.push(si);
                     result = cal.checkLength(cal.travelStack());
+                    
+                    //保存历史记录
+                    var expression = cal.getPreStep();
+                    if (expression && expression !== "&nbsp;") {
+                        //清理表达式中的空格和特殊字符
+                        expression = expression.replace(/&nbsp;/g, "").trim();
+                        if (expression) {
+                            cal.addHistory(expression + " = " + si, result);
+                        }
+                    } else {
+                        //如果没有前置表达式，可能是直接计算的结果
+                        cal.addHistory(si, result);
+                    }
+                    
                     cal.setShowInput(result);
                     cal.preResult = result;
                     cal.setPreStep("&nbsp;");
@@ -605,6 +624,505 @@ var Calculator = (function () {
                 }
                 cal._reset();
                 cal.isPreInputEquals = true;
+            }
+        },
+        
+        /**
+         * 添加历史记录
+         * @param expression 计算表达式
+         * @param result 计算结果
+         */
+        addHistory: function (expression, result) {
+            var historyItem = {
+                expression: expression,
+                result: result,
+                timestamp: Date.now()
+            };
+            
+            cal.history.unshift(historyItem);
+            
+            //限制历史记录数量
+            if (cal.history.length > cal.maxHistory) {
+                cal.history.pop();
+            }
+            
+            //更新历史记录显示
+            cal.updateHistoryDisplay();
+        },
+        
+        /**
+         * 更新历史记录显示
+         */
+        updateHistoryDisplay: function () {
+            var historyList = document.getElementById("history-list");
+            if (!historyList) return;
+            
+            if (cal.history.length === 0) {
+                historyList.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+                return;
+            }
+            
+            var html = "";
+            for (var i = 0; i < cal.history.length; i++) {
+                var item = cal.history[i];
+                html += '<div class="history-item" data-index="' + i + '">';
+                html += '<div class="history-expression">' + item.expression + '</div>';
+                html += '<div class="history-result">' + item.result + '</div>';
+                html += '</div>';
+            }
+            
+            historyList.innerHTML = html;
+            
+            //绑定历史记录项的点击事件
+            var historyItems = document.getElementsByClassName("history-item");
+            for (var j = 0; j < historyItems.length; j++) {
+                historyItems[j].addEventListener("click", function (e) {
+                    var index = parseInt(this.getAttribute("data-index"));
+                    var item = cal.history[index];
+                    //复制结果到剪贴板
+                    cal.copyToClipboard(item.result.toString());
+                    //提示用户
+                    alert("已复制: " + item.result);
+                });
+            }
+        },
+        
+        /**
+         * 复制文本到剪贴板
+         * @param text 要复制的文本
+         */
+        copyToClipboard: function (text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand("copy");
+            } catch (err) {
+                console.error("复制失败:", err);
+            }
+            document.body.removeChild(textArea);
+        },
+        
+        /**
+         * 清空历史记录
+         */
+        clearHistory: function () {
+            cal.history = [];
+            cal.updateHistoryDisplay();
+        },
+        
+        /**
+         * 函数绘图功能
+         */
+        graph: {
+            canvas: null,
+            ctx: null,
+            width: 0,
+            height: 0,
+            xMin: -10,
+            xMax: 10,
+            yMin: -10,
+            yMax: 10,
+            
+            /**
+             * 初始化绘图
+             */
+            init: function () {
+                cal.graph.canvas = document.getElementById("graph-canvas");
+                if (!cal.graph.canvas) return;
+                
+                cal.graph.ctx = cal.graph.canvas.getContext("2d");
+                cal.graph.resize();
+                
+                // 监听窗口大小变化
+                window.addEventListener("resize", function () {
+                    cal.graph.resize();
+                });
+            },
+            
+            /**
+             * 调整Canvas大小
+             */
+            resize: function () {
+                if (!cal.graph.canvas) return;
+                
+                var container = cal.graph.canvas.parentElement;
+                cal.graph.width = container.clientWidth || 400;
+                cal.graph.height = 300;
+                
+                cal.graph.canvas.width = cal.graph.width;
+                cal.graph.canvas.height = cal.graph.height;
+                
+                cal.graph.redraw();
+            },
+            
+            /**
+             * 重绘
+             */
+            redraw: function () {
+                if (!cal.graph.ctx) return;
+                
+                cal.graph.ctx.clearRect(0, 0, cal.graph.width, cal.graph.height);
+                cal.graph.drawAxes();
+            },
+            
+            /**
+             * 绘制坐标轴
+             */
+            drawAxes: function () {
+                var ctx = cal.graph.ctx;
+                var width = cal.graph.width;
+                var height = cal.graph.height;
+                
+                // 计算坐标轴位置
+                var xAxisY = height / 2;
+                var yAxisX = width / 2;
+                
+                // 绘制网格线
+                ctx.strokeStyle = "#E0E0E0";
+                ctx.lineWidth = 1;
+                
+                // 水平网格线
+                var yStep = height / 20;
+                for (var i = 0; i <= 20; i++) {
+                    var y = i * yStep;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                
+                // 垂直网格线
+                var xStep = width / 20;
+                for (var j = 0; j <= 20; j++) {
+                    var x = j * xStep;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                
+                // 绘制坐标轴
+                ctx.strokeStyle = "#666";
+                ctx.lineWidth = 2;
+                
+                // X轴
+                ctx.beginPath();
+                ctx.moveTo(0, xAxisY);
+                ctx.lineTo(width, xAxisY);
+                ctx.stroke();
+                
+                // X轴箭头
+                ctx.beginPath();
+                ctx.moveTo(width - 10, xAxisY - 5);
+                ctx.lineTo(width, xAxisY);
+                ctx.lineTo(width - 10, xAxisY + 5);
+                ctx.stroke();
+                
+                // Y轴
+                ctx.beginPath();
+                ctx.moveTo(yAxisX, height);
+                ctx.lineTo(yAxisX, 0);
+                ctx.stroke();
+                
+                // Y轴箭头
+                ctx.beginPath();
+                ctx.moveTo(yAxisX - 5, 10);
+                ctx.lineTo(yAxisX, 0);
+                ctx.lineTo(yAxisX + 5, 10);
+                ctx.stroke();
+                
+                // 绘制刻度标签
+                ctx.fillStyle = "#666";
+                ctx.font = "10px Arial";
+                ctx.textAlign = "center";
+                
+                // X轴刻度
+                var xRange = cal.graph.xMax - cal.graph.xMin;
+                for (var k = -10; k <= 10; k++) {
+                    if (k === 0) continue;
+                    var xVal = (k / 10) * xRange;
+                    var xPos = yAxisX + (xVal / xRange) * (width / 2);
+                    var label = xVal.toFixed(1);
+                    ctx.fillText(label, xPos, xAxisY + 15);
+                }
+                
+                // Y轴刻度
+                ctx.textAlign = "right";
+                var yRange = cal.graph.yMax - cal.graph.yMin;
+                for (var l = -10; l <= 10; l++) {
+                    if (l === 0) continue;
+                    var yVal = (l / 10) * yRange;
+                    var yPos = xAxisY - (yVal / yRange) * (height / 2);
+                    var yLabel = yVal.toFixed(1);
+                    ctx.fillText(yLabel, yAxisX - 5, yPos + 3);
+                }
+                
+                // 原点标签
+                ctx.textAlign = "right";
+                ctx.fillText("0", yAxisX - 5, xAxisY + 15);
+            },
+            
+            /**
+             * 解析函数表达式
+             * @param expr 函数表达式字符串
+             * @return 解析后的函数
+             */
+            parseFunction: function (expr) {
+                // 替换常见的数学函数和常量
+                expr = expr.replace(/\^/g, "**"); // 幂运算
+                expr = expr.replace(/sin/g, "Math.sin");
+                expr = expr.replace(/cos/g, "Math.cos");
+                expr = expr.replace(/tan/g, "Math.tan");
+                expr = expr.replace(/log/g, "Math.log10");
+                expr = expr.replace(/ln/g, "Math.log");
+                expr = expr.replace(/sqrt/g, "Math.sqrt");
+                expr = expr.replace(/abs/g, "Math.abs");
+                expr = expr.replace(/exp/g, "Math.exp");
+                expr = expr.replace(/π/g, "Math.PI");
+                expr = expr.replace(/pi/g, "Math.PI");
+                expr = expr.replace(/e\b/g, "Math.E");
+                
+                // 处理 x² 这种写法
+                expr = expr.replace(/x²/g, "x**2");
+                expr = expr.replace(/x³/g, "x**3");
+                
+                // 处理 2x 这种写法，转换为 2*x
+                expr = expr.replace(/(\d)(x)/g, "$1*$2");
+                expr = expr.replace(/(x)(\d)/g, "$1*$2");
+                expr = expr.replace(/(\))(x)/g, "$1*$2");
+                expr = expr.replace(/(x)(\()/g, "$1*$2");
+                expr = expr.replace(/(\))(\()/g, "$1*$2");
+                expr = expr.replace(/(\d)(\()/g, "$1*$2");
+                
+                return expr;
+            },
+            
+            /**
+             * 计算函数在x处的值
+             * @param expr 解析后的函数表达式
+             * @param x x值
+             * @return 函数值
+             */
+            calculateValue: function (expr, x) {
+                try {
+                    var func = new Function("x", "return " + expr);
+                    return func(x);
+                } catch (e) {
+                    return NaN;
+                }
+            },
+            
+            /**
+             * 绘制函数
+             * @param expr 函数表达式
+             */
+            drawFunction: function (expr) {
+                if (!cal.graph.ctx) return;
+                
+                var ctx = cal.graph.ctx;
+                var width = cal.graph.width;
+                var height = cal.graph.height;
+                
+                // 解析函数表达式
+                var parsedExpr = cal.graph.parseFunction(expr);
+                console.log("解析后的表达式:", parsedExpr);
+                
+                // 清除画布并重新绘制坐标轴
+                cal.graph.redraw();
+                
+                // 绘制函数曲线
+                ctx.strokeStyle = "#2196F3";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                var xRange = cal.graph.xMax - cal.graph.xMin;
+                var yRange = cal.graph.yMax - cal.graph.yMin;
+                var step = xRange / 1000; // 采样步长
+                
+                var isFirstPoint = true;
+                var prevY = null;
+                
+                for (var x = cal.graph.xMin; x <= cal.graph.xMax; x += step) {
+                    var y = cal.graph.calculateValue(parsedExpr, x);
+                    
+                    // 检查是否是有效数值
+                    if (isNaN(y) || !isFinite(y)) {
+                        isFirstPoint = true;
+                        continue;
+                    }
+                    
+                    // 检查是否有跳变（如渐近线）
+                    if (prevY !== null && Math.abs(y - prevY) > yRange * 0.5) {
+                        isFirstPoint = true;
+                    }
+                    
+                    // 计算像素坐标
+                    var xPixel = (x - cal.graph.xMin) / xRange * width;
+                    var yPixel = height - ((y - cal.graph.yMin) / yRange * height);
+                    
+                    // 检查是否在画布范围内
+                    if (yPixel < -100 || yPixel > height + 100) {
+                        isFirstPoint = true;
+                        prevY = y;
+                        continue;
+                    }
+                    
+                    if (isFirstPoint) {
+                        ctx.moveTo(xPixel, yPixel);
+                        isFirstPoint = false;
+                    } else {
+                        ctx.lineTo(xPixel, yPixel);
+                    }
+                    
+                    prevY = y;
+                }
+                
+                ctx.stroke();
+            },
+            
+            /**
+             * 清除绘图
+             */
+            clear: function () {
+                cal.graph.redraw();
+            }
+        },
+        
+        /**
+         * 初始化新功能（历史记录和绘图）
+         */
+        initFeatures: function () {
+            // 初始化绘图
+            cal.graph.init();
+            
+            // 绑定切换按钮事件
+            var toggleHistory = document.getElementById("toggle-history");
+            var toggleGraph = document.getElementById("toggle-graph");
+            var historyPanel = document.getElementById("history-panel");
+            var graphPanel = document.getElementById("graph-panel");
+            
+            if (toggleHistory) {
+                toggleHistory.addEventListener("click", function () {
+                    cal.switchPanel("history");
+                });
+            }
+            
+            if (toggleGraph) {
+                toggleGraph.addEventListener("click", function () {
+                    cal.switchPanel("graph");
+                });
+            }
+            
+            // 默认显示历史记录面板
+            cal.switchPanel("history");
+            
+            // 绑定清空历史记录按钮
+            var clearHistoryBtn = document.getElementById("history-clear");
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener("click", function () {
+                    if (confirm("确定要清空所有历史记录吗？")) {
+                        cal.clearHistory();
+                    }
+                });
+            }
+            
+            // 绑定绘图按钮
+            var drawBtn = document.getElementById("draw-btn");
+            if (drawBtn) {
+                drawBtn.addEventListener("click", function () {
+                    var funcInput = document.getElementById("function-input");
+                    var xMinInput = document.getElementById("x-min");
+                    var xMaxInput = document.getElementById("x-max");
+                    
+                    if (funcInput && funcInput.value.trim()) {
+                        // 更新X范围
+                        if (xMinInput) cal.graph.xMin = parseFloat(xMinInput.value) || -10;
+                        if (xMaxInput) cal.graph.xMax = parseFloat(xMaxInput.value) || 10;
+                        
+                        // 确保范围有效
+                        if (cal.graph.xMin >= cal.graph.xMax) {
+                            alert("X最小值必须小于X最大值");
+                            return;
+                        }
+                        
+                        // 计算Y范围（基于函数值）
+                        var expr = cal.graph.parseFunction(funcInput.value.trim());
+                        var yMin = Infinity;
+                        var yMax = -Infinity;
+                        var xRange = cal.graph.xMax - cal.graph.xMin;
+                        var step = xRange / 100;
+                        
+                        for (var x = cal.graph.xMin; x <= cal.graph.xMax; x += step) {
+                            var y = cal.graph.calculateValue(expr, x);
+                            if (!isNaN(y) && isFinite(y)) {
+                                if (y < yMin) yMin = y;
+                                if (y > yMax) yMax = y;
+                            }
+                        }
+                        
+                        // 如果无法计算Y范围，使用默认值
+                        if (yMin === Infinity || yMax === -Infinity || !isFinite(yMin) || !isFinite(yMax)) {
+                            yMin = -10;
+                            yMax = 10;
+                        }
+                        
+                        // 添加一些边距
+                        var yPadding = (yMax - yMin) * 0.1 || 1;
+                        cal.graph.yMin = yMin - yPadding;
+                        cal.graph.yMax = yMax + yPadding;
+                        
+                        // 绘制函数
+                        cal.graph.drawFunction(funcInput.value.trim());
+                    }
+                });
+            }
+            
+            // 绑定清除绘图按钮
+            var clearGraphBtn = document.getElementById("clear-graph-btn");
+            if (clearGraphBtn) {
+                clearGraphBtn.addEventListener("click", function () {
+                    cal.graph.clear();
+                });
+            }
+            
+            // 绑定关闭绘图面板按钮
+            var graphClose = document.getElementById("graph-close");
+            if (graphClose) {
+                graphClose.addEventListener("click", function () {
+                    cal.switchPanel("history");
+                });
+            }
+        },
+        
+        /**
+         * 切换面板
+         * @param panelType 面板类型: "history" 或 "graph"
+         */
+        switchPanel: function (panelType) {
+            var historyPanel = document.getElementById("history-panel");
+            var graphPanel = document.getElementById("graph-panel");
+            var toggleHistory = document.getElementById("toggle-history");
+            var toggleGraph = document.getElementById("toggle-graph");
+            
+            if (panelType === "history") {
+                if (historyPanel) historyPanel.style.display = "block";
+                if (graphPanel) graphPanel.style.display = "none";
+                if (toggleHistory) toggleHistory.classList.add("active");
+                if (toggleGraph) toggleGraph.classList.remove("active");
+            } else if (panelType === "graph") {
+                if (historyPanel) historyPanel.style.display = "none";
+                if (graphPanel) graphPanel.style.display = "block";
+                if (toggleHistory) toggleHistory.classList.remove("active");
+                if (toggleGraph) toggleGraph.classList.add("active");
+                
+                // 调整绘图大小
+                setTimeout(function () {
+                    cal.graph.resize();
+                    // 重新绘制坐标轴
+                    cal.graph.redraw();
+                }, 100);
             }
         },
         /**
