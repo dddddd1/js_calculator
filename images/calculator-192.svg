@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect x="16" y="16" width="160" height="160" rx="16" fill="#F2F2F2" stroke="#4D4D4D" stroke-width="2"/>
+  <rect x="32" y="32" width="128" height="40" rx="4" fill="#FFFFFF" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="144" y="60" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#333333">0</text>
+  <rect x="32" y="88" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="46" y="106" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">7</text>
+  <rect x="64" y="88" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="78" y="106" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">8</text>
+  <rect x="96" y="88" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="110" y="106" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">9</text>
+  <rect x="128" y="88" width="32" height="24" rx="2" fill="#F2F2F2" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="144" y="106" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#333333">÷</text>
+  <rect x="32" y="116" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="46" y="134" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">4</text>
+  <rect x="64" y="116" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="78" y="134" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">5</text>
+  <rect x="96" y="116" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="110" y="134" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">6</text>
+  <rect x="128" y="116" width="32" height="24" rx="2" fill="#F2F2F2" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="144" y="134" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#333333">×</text>
+  <rect x="32" y="144" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="46" y="162" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">1</text>
+  <rect x="64" y="144" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="78" y="162" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">2</text>
+  <rect x="96" y="144" width="28" height="24" rx="2" fill="#E6E6E6" stroke="#A7A7A7" stroke-width="1"/>
+  <text x="110" y="162" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#333333">3</text>
+  <rect x="128" y="144" width="32" height="52" rx="2" fill="#0078D7" stroke="#005A9E" stroke-width="1"/>
+  <text x="144" y="172" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#FFFFFF">=</text>
+</svg>

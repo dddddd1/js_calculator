@@ -1,14 +1,17 @@
-var CACHE_NAME = 'calculator-v1.0.0';
+var CACHE_NAME = 'calculator-v1.1.0';
 var urlsToCache = [
     './',
     './index.html',
     './css/cal.css',
     './js/cal.js',
+    './manifest.json',
     './images/1_x.png',
     './images/10_x.png',
     './images/x_2.png',
     './images/x_y.png',
-    './images/x_y_sqrt.png'
+    './images/x_y_sqrt.png',
+    './images/calculator-192.svg',
+    './images/calculator-512.svg'
 ];
 
 self.addEventListener('install', function(event) {

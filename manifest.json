@@ -4,22 +4,68 @@
     "description": "一个功能完整的计算器应用，支持标准型、科学型和程序员型",
     "start_url": "./index.html",
     "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "browser"],
     "background_color": "#F2F2F2",
     "theme_color": "#F2F2F2",
     "icons": [
         {
-            "src": "images/calculator-192.png",
+            "src": "images/calculator-192.svg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
         },
         {
-            "src": "images/calculator-512.png",
+            "src": "images/calculator-512.svg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "screenshots/standard.png",
+            "sizes": "350x480",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "screenshots/science.png",
+            "sizes": "350x480",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "screenshots/programmer.png",
+            "sizes": "350x480",
+            "type": "image/png",
+            "form_factor": "wide"
         }
     ],
     "orientation": "portrait-primary",
     "scope": "./",
-    "categories": ["utilities"],
-    "lang": "zh-CN"
+    "categories": ["utilities", "productivity"],
+    "lang": "zh-CN",
+    "dir": "ltr",
+    "prefer_related_applications": false,
+    "shortcuts": [
+        {
+            "name": "标准计算器",
+            "short_name": "标准",
+            "description": "打开标准型计算器",
+            "url": "./index.html?type=standard",
+            "icons": [
+                {
+                    "src": "images/calculator-192.svg",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "related_applications": [],
+    "launch_handler": {
+        "client_mode": "navigate-existing"
+    },
+    "edge_side_panel": {
+        "preferred_width": 400
+    }
 }
