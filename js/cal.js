@@ -1,6 +1,7 @@
 window.onload = function () {
     Calculator.initCache();
     Calculator.initListeners();
+    Calculator.initPWA();
 };
 
 //全局计算器对象
@@ -100,7 +101,13 @@ var Calculator = (function () {
             //上一步计算结果显示区域
             preStep: null,
             //显示四种进制数值的span，只在程序员型有效
-            scaleSpans: null
+            scaleSpans: null,
+            //语音播报开关元素
+            voiceToggle: null,
+            //撤销按钮元素
+            undoBtn: null,
+            //重做按钮元素
+            redoBtn: null
         },
         /**
          * 获取cache.showInput的内容
@@ -164,6 +171,15 @@ var Calculator = (function () {
             "yroot": 5,
             "(": 6
         },
+        //语音播报状态，默认开启
+        voiceEnabled: true,
+        //历史记录栈，用于撤销/重做
+        historyStack: [],
+        //当前历史索引
+        historyIndex: -1,
+        //最大历史记录数
+        maxHistoryLength: 50,
+        
         /**
          * 初始化缓存对象(cal.cache)
          */
@@ -171,9 +187,13 @@ var Calculator = (function () {
             var prefix = cal.typePrefix[cal.type];
             cal.cache.showInput = document.getElementById(prefix + "show-input");
             cal.cache.preStep = document.getElementById(prefix + "pre-step");
+            cal.cache.voiceToggle = document.getElementById(prefix + "voice-toggle");
+            cal.cache.undoBtn = document.getElementById(prefix + "undo-btn");
+            cal.cache.redoBtn = document.getElementById(prefix + "redo-btn");
             if (cal.type == 3) {
                 cal.cache.scaleSpans = document.getElementById("pro-scales").getElementsByTagName("span");
             }
+            cal.updateUndoRedoButtons();
         },
         //各种事件监听函数
         listeners: {
@@ -273,6 +293,24 @@ var Calculator = (function () {
                 cal.currentScale = scale;
             },
             /**
+             * 语音播报开关切换
+             */
+            voiceToggleListener: function () {
+                cal.toggleVoice();
+            },
+            /**
+             * 撤销操作
+             */
+            undoListener: function () {
+                cal.undo();
+            },
+            /**
+             * 重做操作
+             */
+            redoListener: function () {
+                cal.redo();
+            },
+            /**
              * 初始化第一排操运算符事件监听
              * @private
              */
@@ -324,6 +362,11 @@ var Calculator = (function () {
                     cal.addEvent(scale, "click", cal.listeners.switchScaleListener);
                 }
             }
+            //绑定语音播报开关事件
+            cal.addEvent(cal.cache.voiceToggle, "click", cal.listeners.voiceToggleListener);
+            //绑定撤销/重做事件
+            cal.addEvent(cal.cache.undoBtn, "click", cal.listeners.undoListener);
+            cal.addEvent(cal.cache.redoBtn, "click", cal.listeners.redoListener);
         },
         /**
          * 相应按键按下事件
@@ -331,179 +374,187 @@ var Calculator = (function () {
          */
         handleKey: function (value) {
             var keyCode = parseInt(value);
-            //如果是一个数字或者小数点，直接显示出来
-            if (keyCode < 11 || (keyCode > 39 && keyCode < 46)) {
-                cal.showInput(cal.keyCodes[keyCode]);
-                if (cal.type === 3) {
-                    //如果是程序员型，那么需要同步显示4中进制的值
-                    cal.showScales(cal.getShowInput());
-                }
-            } else {
-                switch (keyCode) {
-                    //正负号
-                    case 11:
-                        cal.unaryOperate(function (oldValue) {
-                            oldValue += "";
-                            if (oldValue === "0") {
-                                return [oldValue];
-                            }
-                            if (oldValue.charAt(0) === '-') {
-                                return [oldValue.substring(1)];
-                            } else {
-                                return ["-" + oldValue];
-                            }
-                        });
-                        break;
-                        //开根下
-                    case 18:
-                        cal.unaryOperate(function (si) {
-                            return [Math.sqrt(si), "sqrt"];
-                        });
-                        break;
-                        //平方
-                    case 19:
-                        cal.unaryOperate(function (si) {
-                            return [Math.pow(si, 2), "sqr"];
-                        });
-                        break;
-                        //取倒数
-                    case 20:
-                        cal.unaryOperate(function (si) {
-                            return [si === 0 ? "0不能作为被除数" : 1 / si, "1/"];
-                        });
-                        break;
-                        //阶乘
-                    case 24:
-                        cal.unaryOperate(function (si) {
-                            if (si < 0) {
-                                si = (0 - si);
-                            }
-                            if (cal.isFloat(si + "")) {
-                                si = Math.floor(si);
-                            }
-                            return [cal.fact(si), "fact"];
-                        });
-                        break;
-                        //Exp 转为科学计数法表示
-                    case 25:
-                        cal.unaryOperate(function (si) {
-                            return [si.toExponential(7)];
-                        });
-                        break;
-                        //sin
-                    case 27:
-                        cal.unaryOperate(function (si) {
-                            return [Math.sin(si), "sin"];
-                        });
-                        break;
-                        //cos
-                    case 28:
-                        cal.unaryOperate(function (si) {
-                            return [Math.cos(si), "cos"];
-                        });
-                        break;
-                        //tan
-                    case 29:
-                        cal.unaryOperate(function (si) {
-                            return [Math.tan(si), "tan"];
-                        });
-                        break;
-                        //10的x次方
-                    case 30:
-                        cal.unaryOperate(function (si) {
-                            return [Math.pow(10, si), "powten"];
-                        });
-                        break;
-                        //log
-                    case 31:
-                        cal.unaryOperate(function (si) {
-                            //js的Math.log是e的对数，Windows计算器是10的对数，此处参考Windows
-                            return [Math.log10(si), "log"];
-                        });
-                        break;
-                        //sinh(双曲正弦函数)
-                    case 32:
-                        cal.unaryOperate(function (si) {
-                            return [Math.sinh(si), "sinh"];
-                        });
-                        break;
-                        //cosh(双曲余弦函数)
-                    case 33:
-                        cal.unaryOperate(function (si) {
-                            return [Math.cosh(si), "cosh"];
-                        });
-                        break;
-                        //tanh(双曲余切函数)
-                    case 34:
-                        cal.unaryOperate(function (si) {
-                            return [Math.tanh(si), "tanh"];
-                        });
-                        break;
-                        //π
-                    case 35:
-                        cal.unaryOperate(function (si) {
-                            return [Math.PI];
-                        });
-                        break;
-                        //按位取反(~)
-                    case 48:
-                        cal.unaryOperate(function (si) {
-                            var result = eval("~" + si);
-                            //显示四种进制的数值
-                            cal.showScales(result);
-                            return [result];
-                        });
-                        break;
-                        //二元运算符开始
-                        //加、减、乘、除、取余，运算比较简单，直接利用eval即可求值
-                    case 13:
-                    case 14:
-                    case 15:
-                    case 16:
-                    case 17:
-                        //x的y次方
-                    case 26:
-                        //开任意次方根
-                    case 23:
-                        //And Or
-                    case 46:
-                    case 47:
-                        if (cal.isPreInputBinaryOperator) {
+            
+            cal.saveToHistory();
+            
+            try {
+                //如果是一个数字或者小数点，直接显示出来
+                if (keyCode < 11 || (keyCode > 39 && keyCode < 46)) {
+                    cal.showInput(cal.keyCodes[keyCode]);
+                    if (cal.type === 3) {
+                        //如果是程序员型，那么需要同步显示4中进制的值
+                        cal.showScales(cal.getShowInput());
+                    }
+                } else {
+                    switch (keyCode) {
+                        //正负号
+                        case 11:
+                            cal.unaryOperate(function (oldValue) {
+                                oldValue += "";
+                                if (oldValue === "0") {
+                                    return [oldValue];
+                                }
+                                if (oldValue.charAt(0) === '-') {
+                                    return [oldValue.substring(1)];
+                                } else {
+                                    return ["-" + oldValue];
+                                }
+                            });
                             break;
-                        }
-                        cal.isPreInputBinaryOperator = true;
-                        cal.isOverride = true;
-                        cal.binaryOperate(cal.keyCodes[keyCode], cal.operatorFacade[keyCode]);
-                        break;
-                    case 12:
-                        cal.calculate();
-                        break;
-                        //ce
-                    case 37:
-                        cal.ce();
-                        break;
-                        //c
-                    case 38:
-                        cal.clear();
-                        break;
-                        //back
-                    case 39:
-                        cal.back();
-                        break;
-                        // (
-                    case 21:
-                        cal.setPreStep(cal.getPreStep() + " (");
-                        cal.operatorStack.push("(");
-                        break;
-                        // )
-                    case 22:
-                        cal.rightTag();
-                        break;
-                        //向上箭头，把上次计算结果显示出来
-                    case 36:
-                        cal.setShowInput(cal.preResult);
-                        break;
+                            //开根下
+                        case 18:
+                            cal.unaryOperate(function (si) {
+                                return [Math.sqrt(si), "sqrt"];
+                            });
+                            break;
+                            //平方
+                        case 19:
+                            cal.unaryOperate(function (si) {
+                                return [Math.pow(si, 2), "sqr"];
+                            });
+                            break;
+                            //取倒数
+                        case 20:
+                            cal.unaryOperate(function (si) {
+                                return [si === 0 ? "0不能作为被除数" : 1 / si, "1/"];
+                            });
+                            break;
+                            //阶乘
+                        case 24:
+                            cal.unaryOperate(function (si) {
+                                if (si < 0) {
+                                    si = (0 - si);
+                                }
+                                if (cal.isFloat(si + "")) {
+                                    si = Math.floor(si);
+                                }
+                                return [cal.fact(si), "fact"];
+                            });
+                            break;
+                            //Exp 转为科学计数法表示
+                        case 25:
+                            cal.unaryOperate(function (si) {
+                                return [si.toExponential(7)];
+                            });
+                            break;
+                            //sin
+                        case 27:
+                            cal.unaryOperate(function (si) {
+                                return [Math.sin(si), "sin"];
+                            });
+                            break;
+                            //cos
+                        case 28:
+                            cal.unaryOperate(function (si) {
+                                return [Math.cos(si), "cos"];
+                            });
+                            break;
+                            //tan
+                        case 29:
+                            cal.unaryOperate(function (si) {
+                                return [Math.tan(si), "tan"];
+                            });
+                            break;
+                            //10的x次方
+                        case 30:
+                            cal.unaryOperate(function (si) {
+                                return [Math.pow(10, si), "powten"];
+                            });
+                            break;
+                            //log
+                        case 31:
+                            cal.unaryOperate(function (si) {
+                                //js的Math.log是e的对数，Windows计算器是10的对数，此处参考Windows
+                                return [Math.log10(si), "log"];
+                            });
+                            break;
+                            //sinh(双曲正弦函数)
+                        case 32:
+                            cal.unaryOperate(function (si) {
+                                return [Math.sinh(si), "sinh"];
+                            });
+                            break;
+                            //cosh(双曲余弦函数)
+                        case 33:
+                            cal.unaryOperate(function (si) {
+                                return [Math.cosh(si), "cosh"];
+                            });
+                            break;
+                            //tanh(双曲余切函数)
+                        case 34:
+                            cal.unaryOperate(function (si) {
+                                return [Math.tanh(si), "tanh"];
+                            });
+                            break;
+                            //π
+                        case 35:
+                            cal.unaryOperate(function (si) {
+                                return [Math.PI];
+                            });
+                            break;
+                            //按位取反(~)
+                        case 48:
+                            cal.unaryOperate(function (si) {
+                                var result = eval("~" + si);
+                                //显示四种进制的数值
+                                cal.showScales(result);
+                                return [result];
+                            });
+                            break;
+                            //二元运算符开始
+                            //加、减、乘、除、取余，运算比较简单，直接利用eval即可求值
+                        case 13:
+                        case 14:
+                        case 15:
+                        case 16:
+                        case 17:
+                            //x的y次方
+                        case 26:
+                            //开任意次方根
+                        case 23:
+                            //And Or
+                        case 46:
+                        case 47:
+                            if (cal.isPreInputBinaryOperator) {
+                                break;
+                            }
+                            cal.isPreInputBinaryOperator = true;
+                            cal.isOverride = true;
+                            cal.binaryOperate(cal.keyCodes[keyCode], cal.operatorFacade[keyCode]);
+                            break;
+                        case 12:
+                            cal.calculate();
+                            break;
+                            //ce
+                        case 37:
+                            cal.ce();
+                            break;
+                            //c
+                        case 38:
+                            cal.clear();
+                            break;
+                            //back
+                        case 39:
+                            cal.back();
+                            break;
+                            // (
+                        case 21:
+                            cal.setPreStep(cal.getPreStep() + " (");
+                            cal.operatorStack.push("(");
+                            break;
+                            // )
+                        case 22:
+                            cal.rightTag();
+                            break;
+                            //向上箭头，把上次计算结果显示出来
+                        case 36:
+                            cal.setShowInput(cal.preResult);
+                            break;
+                    }
                 }
+            } catch (e) {
+                alert("计算错误: " + e.message);
+                console.error("计算错误:", e);
             }
         },
         /**
@@ -591,20 +642,46 @@ var Calculator = (function () {
             if (!cal.isPreInputEquals) {
                 var si = cal.getShowInput(),
                     result;
-                if (cal.isNumber(si)) {
-                    cal.operandStack.push(si);
-                    result = cal.checkLength(cal.travelStack());
-                    cal.setShowInput(result);
-                    cal.preResult = result;
-                    cal.setPreStep("&nbsp;");
-                    //程序员型需要把计算结果的四种进制值显示出来
-                    if (cal.type === 3) {
-                        cal.showScales(result);
+                
+                try {
+                    if (cal.isNumber(si)) {
+                        cal.operandStack.push(si);
+                        
+                        // 检查括号是否匹配
+                        var leftCount = 0, rightCount = 0;
+                        for (var i = 0; i < cal.operatorStack.length; i++) {
+                            if (cal.operatorStack[i] === "(") leftCount++;
+                            if (cal.operatorStack[i] === ")") rightCount++;
+                        }
+                        if (leftCount !== rightCount) {
+                            throw new Error("括号不匹配，请检查表达式");
+                        }
+                        
+                        result = cal.checkLength(cal.travelStack());
+                        
+                        // 检查结果是否有效
+                        if (isNaN(result) || !isFinite(result)) {
+                            throw new Error("计算结果无效，请检查表达式");
+                        }
+                        
+                        cal.setShowInput(result);
+                        cal.preResult = result;
+                        cal.setPreStep("&nbsp;");
+                        //程序员型需要把计算结果的四种进制值显示出来
+                        if (cal.type === 3) {
+                            cal.showScales(result);
+                        }
+                        cal.isOverride = true;
+                        
+                        // 语音播报结果
+                        cal.speakResult("计算结果是" + result);
                     }
-                    cal.isOverride = true;
+                    cal._reset();
+                    cal.isPreInputEquals = true;
+                } catch (e) {
+                    alert("计算错误: " + e.message);
+                    console.error("计算错误:", e);
                 }
-                cal._reset();
-                cal.isPreInputEquals = true;
             }
         },
         /**
@@ -696,7 +773,26 @@ var Calculator = (function () {
                         result = eval(fi + op + si).toString(2);
                     }
                 } else {
-                    result = eval(f + op + s);
+                    // 使用高精度计算
+                    switch (op) {
+                        case '+':
+                            result = cal.highPrecisionAdd(f, s);
+                            break;
+                        case '-':
+                            result = cal.highPrecisionSub(f, s);
+                            break;
+                        case '*':
+                            result = cal.highPrecisionMul(f, s);
+                            break;
+                        case '/':
+                            result = cal.highPrecisionDiv(f, s);
+                            break;
+                        case '%':
+                            result = cal.highPrecisionMod(f, s);
+                            break;
+                        default:
+                            result = eval(f + op + s);
+                    }
                 }
             }
             return result;
@@ -727,6 +823,10 @@ var Calculator = (function () {
             if (cal.type === 3) {
                 cal.resetScales();
             }
+            // 清空历史记录
+            cal.historyStack = [];
+            cal.historyIndex = -1;
+            cal.updateUndoRedoButtons();
         },
         /**
          * 清空四个进制的值
@@ -983,6 +1083,282 @@ var Calculator = (function () {
                 cal.addEvent(li, "click", cal.listeners.keyPressListener);
                 cal.addEvent(li, "mouseout", mouseOutListener);
                 cal.addEvent(li, "mouseover", cal.listeners.mouseHoverListener);
+            }
+        },
+        /**
+         * 高精度加法运算
+         * @param {string|number} a - 第一个数
+         * @param {string|number} b - 第二个数
+         * @returns {number} 计算结果
+         */
+        highPrecisionAdd: function (a, b) {
+            var aStr = a.toString();
+            var bStr = b.toString();
+            var aDecimal = aStr.indexOf('.') === -1 ? 0 : aStr.split('.')[1].length;
+            var bDecimal = bStr.indexOf('.') === -1 ? 0 : bStr.split('.')[1].length;
+            var maxDecimal = Math.max(aDecimal, bDecimal);
+            var m = Math.pow(10, maxDecimal);
+            return (Math.round(a * m) + Math.round(b * m)) / m;
+        },
+        /**
+         * 高精度减法运算
+         * @param {string|number} a - 第一个数
+         * @param {string|number} b - 第二个数
+         * @returns {number} 计算结果
+         */
+        highPrecisionSub: function (a, b) {
+            var aStr = a.toString();
+            var bStr = b.toString();
+            var aDecimal = aStr.indexOf('.') === -1 ? 0 : aStr.split('.')[1].length;
+            var bDecimal = bStr.indexOf('.') === -1 ? 0 : bStr.split('.')[1].length;
+            var maxDecimal = Math.max(aDecimal, bDecimal);
+            var m = Math.pow(10, maxDecimal);
+            return (Math.round(a * m) - Math.round(b * m)) / m;
+        },
+        /**
+         * 高精度乘法运算
+         * @param {string|number} a - 第一个数
+         * @param {string|number} b - 第二个数
+         * @returns {number} 计算结果
+         */
+        highPrecisionMul: function (a, b) {
+            var aStr = a.toString();
+            var bStr = b.toString();
+            var aDecimal = aStr.indexOf('.') === -1 ? 0 : aStr.split('.')[1].length;
+            var bDecimal = bStr.indexOf('.') === -1 ? 0 : bStr.split('.')[1].length;
+            var totalDecimal = aDecimal + bDecimal;
+            var aInt = parseInt(aStr.replace('.', ''), 10);
+            var bInt = parseInt(bStr.replace('.', ''), 10);
+            return (aInt * bInt) / Math.pow(10, totalDecimal);
+        },
+        /**
+         * 高精度除法运算
+         * @param {string|number} a - 第一个数（被除数）
+         * @param {string|number} b - 第二个数（除数）
+         * @returns {number} 计算结果
+         */
+        highPrecisionDiv: function (a, b) {
+            if (parseFloat(b) === 0) {
+                return NaN;
+            }
+            var aStr = a.toString();
+            var bStr = b.toString();
+            var aDecimal = aStr.indexOf('.') === -1 ? 0 : aStr.split('.')[1].length;
+            var bDecimal = bStr.indexOf('.') === -1 ? 0 : bStr.split('.')[1].length;
+            var maxDecimal = Math.max(aDecimal, bDecimal);
+            var m = Math.pow(10, maxDecimal);
+            return (Math.round(a * m) / Math.round(b * m));
+        },
+        /**
+         * 高精度取余运算
+         * @param {string|number} a - 第一个数
+         * @param {string|number} b - 第二个数
+         * @returns {number} 计算结果
+         */
+        highPrecisionMod: function (a, b) {
+            var aStr = a.toString();
+            var bStr = b.toString();
+            var aDecimal = aStr.indexOf('.') === -1 ? 0 : aStr.split('.')[1].length;
+            var bDecimal = bStr.indexOf('.') === -1 ? 0 : bStr.split('.')[1].length;
+            var maxDecimal = Math.max(aDecimal, bDecimal);
+            var m = Math.pow(10, maxDecimal);
+            return (Math.round(a * m) % Math.round(b * m)) / m;
+        },
+        /**
+         * 保存当前状态到历史栈
+         */
+        saveToHistory: function () {
+            var state = {
+                showInput: cal.getShowInput(),
+                preStep: cal.getPreStep(),
+                operandStack: JSON.parse(JSON.stringify(cal.operandStack)),
+                operatorStack: JSON.parse(JSON.stringify(cal.operatorStack)),
+                isPreInputBinaryOperator: cal.isPreInputBinaryOperator,
+                isPreInputUnaryOperator: cal.isPreInputUnaryOperator,
+                isPreInputEquals: cal.isPreInputEquals,
+                isOverride: cal.isOverride,
+                preResult: cal.preResult
+            };
+            
+            if (cal.historyIndex < cal.historyStack.length - 1) {
+                cal.historyStack = cal.historyStack.slice(0, cal.historyIndex + 1);
+            }
+            
+            cal.historyStack.push(state);
+            
+            if (cal.historyStack.length > cal.maxHistoryLength) {
+                cal.historyStack.shift();
+            } else {
+                cal.historyIndex++;
+            }
+            
+            cal.updateUndoRedoButtons();
+        },
+        /**
+         * 更新撤销/重做按钮状态
+         */
+        updateUndoRedoButtons: function () {
+            if (cal.cache.undoBtn && cal.cache.redoBtn) {
+                if (cal.historyIndex > 0) {
+                    cal.cache.undoBtn.classList.remove('disabled');
+                } else {
+                    cal.cache.undoBtn.classList.add('disabled');
+                }
+                
+                if (cal.historyIndex < cal.historyStack.length - 1) {
+                    cal.cache.redoBtn.classList.remove('disabled');
+                } else {
+                    cal.cache.redoBtn.classList.add('disabled');
+                }
+            }
+        },
+        /**
+         * 撤销操作
+         */
+        undo: function () {
+            if (cal.historyIndex > 0) {
+                cal.historyIndex--;
+                var state = cal.historyStack[cal.historyIndex];
+                cal.setShowInput(state.showInput);
+                cal.setPreStep(state.preStep);
+                cal.operandStack = JSON.parse(JSON.stringify(state.operandStack));
+                cal.operatorStack = JSON.parse(JSON.stringify(state.operatorStack));
+                cal.isPreInputBinaryOperator = state.isPreInputBinaryOperator;
+                cal.isPreInputUnaryOperator = state.isPreInputUnaryOperator;
+                cal.isPreInputEquals = state.isPreInputEquals;
+                cal.isOverride = state.isOverride;
+                cal.preResult = state.preResult;
+                
+                if (cal.type === 3 && cal.isNumber(state.showInput)) {
+                    cal.showScales(state.showInput);
+                }
+                
+                cal.updateUndoRedoButtons();
+            }
+        },
+        /**
+         * 重做操作
+         */
+        redo: function () {
+            if (cal.historyIndex < cal.historyStack.length - 1) {
+                cal.historyIndex++;
+                var state = cal.historyStack[cal.historyIndex];
+                cal.setShowInput(state.showInput);
+                cal.setPreStep(state.preStep);
+                cal.operandStack = JSON.parse(JSON.stringify(state.operandStack));
+                cal.operatorStack = JSON.parse(JSON.stringify(state.operatorStack));
+                cal.isPreInputBinaryOperator = state.isPreInputBinaryOperator;
+                cal.isPreInputUnaryOperator = state.isPreInputUnaryOperator;
+                cal.isPreInputEquals = state.isPreInputEquals;
+                cal.isOverride = state.isOverride;
+                cal.preResult = state.preResult;
+                
+                if (cal.type === 3 && cal.isNumber(state.showInput)) {
+                    cal.showScales(state.showInput);
+                }
+                
+                cal.updateUndoRedoButtons();
+            }
+        },
+        /**
+         * 切换语音播报开关
+         */
+        toggleVoice: function () {
+            cal.voiceEnabled = !cal.voiceEnabled;
+            var prefix = cal.typePrefix[cal.type];
+            var voiceToggle = document.getElementById(prefix + "voice-toggle");
+            
+            if (cal.voiceEnabled) {
+                voiceToggle.textContent = "🔊";
+                voiceToggle.classList.remove('disabled');
+            } else {
+                voiceToggle.textContent = "🔇";
+                voiceToggle.classList.add('disabled');
+            }
+        },
+        /**
+         * 语音朗读结果
+         * @param {string|number} text - 要朗读的文本
+         */
+        speakResult: function (text) {
+            if (!cal.voiceEnabled || !window.speechSynthesis) {
+                return;
+            }
+            
+            try {
+                window.speechSynthesis.cancel();
+                var utterance = new SpeechSynthesisUtterance(text.toString());
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.error('语音播报错误:', e);
+            }
+        },
+        /**
+         * 验证括号是否匹配
+         * @param {string} expression - 表达式字符串
+         * @returns {boolean} 是否匹配
+         */
+        validateParentheses: function (expression) {
+            var stack = [];
+            for (var i = 0; i < expression.length; i++) {
+                if (expression[i] === '(') {
+                    stack.push('(');
+                } else if (expression[i] === ')') {
+                    if (stack.length === 0) {
+                        return false;
+                    }
+                    stack.pop();
+                }
+            }
+            return stack.length === 0;
+        },
+        /**
+         * 验证表达式是否合法
+         * @param {string} expression - 表达式字符串
+         * @returns {object} 验证结果，包含isValid和message
+         */
+        validateExpression: function (expression) {
+            if (!expression || expression.trim() === '') {
+                return { isValid: false, message: '表达式不能为空' };
+            }
+            
+            if (!cal.validateParentheses(expression)) {
+                return { isValid: false, message: '括号不匹配，请检查左右括号数量是否相等' };
+            }
+            
+            var invalidPatterns = [
+                /[+\-*\/%^]{2,}/,
+                /^[+\-*\/%^]/,
+                /[+\-*\/%^]$/,
+                /\(\s*[+\-*\/%^]/,
+                /[+\-*\/%^]\s*\)/
+            ];
+            
+            for (var i = 0; i < invalidPatterns.length; i++) {
+                if (invalidPatterns[i].test(expression)) {
+                    return { isValid: false, message: '表达式格式不正确，请检查运算符位置' };
+                }
+            }
+            
+            return { isValid: true, message: '' };
+        },
+        /**
+         * 初始化PWA功能
+         */
+        initPWA: function () {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('./service-worker.js')
+                        .then(function (registration) {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(function (err) {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
             }
         }
     };
